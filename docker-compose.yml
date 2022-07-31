@@ -1,0 +1,51 @@
+version: '3.9'
+
+volumes:
+  static_volume:
+  media_volume:
+
+services:
+  web:
+    build: ./compose/back/
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+    expose:
+      - 8000
+    env_file:
+      - ./.venv/.env.dev
+    image: web:django
+    container_name: django_container
+    command: gunicorn --bind 0.0.0.0:8000 kelechek_project.wsgi --workers=4
+    depends_on:
+      - db
+    networks:
+      - django-network
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - ./compose/data/db:/var/lib/postgresql/data
+      - ./compose/postgres/maintenance:/usr/local/bin/maintenance
+    restart: always
+    env_file:
+      - ./.venv/.env.dev
+    container_name: postgres_container
+    networks:
+      - django-network
+  nginx:
+    build: ./compose/nginx
+    ports:
+      - 80:80
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+    links:
+      - web
+    depends_on:
+      - web
+    networks:
+      - django-network
+
+networks:
+  django-network:
+    name: django-network
