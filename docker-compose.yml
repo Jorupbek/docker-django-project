@@ -8,6 +8,7 @@ services:
   web:
     build: ./compose/back/
     volumes:
+      - ./compose/back/kelechek_kooperativ/:/app
       - static_volume:/app/static
       - media_volume:/app/media
     expose:
@@ -36,15 +37,25 @@ services:
     build: ./compose/nginx
     ports:
       - 80:80
+      - 443:443
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
+      - ./compose/nginx/conf:/etc/letsencrypt
+      - ./compose/nginx/:/app/certbot
     links:
       - web
     depends_on:
       - web
     networks:
       - django-network
+
+  certbot:
+    image: certbot/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    volumes:
+      - ./compose/nginx/conf:/etc/letsencrypt
+      - ./compose/nginx/:/app/certbot
 
 networks:
   django-network:
